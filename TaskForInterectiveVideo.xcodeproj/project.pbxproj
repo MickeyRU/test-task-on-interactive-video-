@@ -56,20 +56,12 @@
 			children = (
 				BE6A605328620298003C1D65 /* AppDelegate.swift */,
 				BE6A605728620298003C1D65 /* ViewController.swift */,
-				BE6A606B28620C95003C1D65 /* Model */,
 				BE6A605C28620299003C1D65 /* Assets.xcassets */,
 				BE6A605E28620299003C1D65 /* LaunchScreen.storyboard */,
 				BE6A606128620299003C1D65 /* Info.plist */,
 				BE6A606728620463003C1D65 /* FastTyping.mp4 */,
 			);
 			path = TaskForInterectiveVideo;
-			sourceTree = "<group>";
-		};
-		BE6A606B28620C95003C1D65 /* Model */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Model;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

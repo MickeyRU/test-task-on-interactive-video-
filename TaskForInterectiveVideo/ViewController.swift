@@ -28,6 +28,7 @@ class ViewController: UIViewController {
         let view = UIImageView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.image = UIImage(named: "Hand")
+        view.isHidden = true
         return view
     }()
     
@@ -59,30 +60,76 @@ class ViewController: UIViewController {
         return view
     }()
     
-    let targetVector: UIImageView = {
+    let startTargetVector: UIImageView = {
         let view = UIImageView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.image = UIImage(named: "Vector")
         return view
     }()
     
+    let timerLeftLabel: UILabel = {
+        let label = UILabel()
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.text = ""
+        label.font = UIFont.systemFont(ofSize: 12)
+        label.textColor = .white
+        label.numberOfLines = 0
+        label.textAlignment = .center
+        return label
+    }()
+    
+    let timerRightLabel: UILabel = {
+        let label = UILabel()
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.text = ""
+        label.font = UIFont.systemFont(ofSize: 12)
+        label.textColor = .white
+        label.numberOfLines = 0
+        label.textAlignment = .center
+        return label
+    }()
+    
+    var countdownTimer = Timer()
+    var durationTimer = 0
+    
+    // Создал 2 переменные для настроек констрейнтов startTargetVector, чтобы в дальнейшем их использовать для анимации
+    private var centralXAnchorTargetVector = NSLayoutConstraint()
+    private var centralYAnchorTargetVector = NSLayoutConstraint()
+    
+    
+    
+    
     //MARK: - Делаем Инициализацию
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        let value = UIInterfaceOrientation.landscapeLeft.rawValue
+        UIDevice.current.setValue(value, forKey: "orientation")
+        
         layout()
+        setupStartGestures()
+        playVideo()
     }
     
-    override func viewWillLayoutSubviews() {
-        super.viewWillLayoutSubviews()
-        playVideo()
-        setupGestures()
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        return .landscapeLeft
     }
+    
+    override var shouldAutorotate: Bool {
+        return true
+    }
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        setupHandmovingGestures()
+    }
+    
     
     func layout() {
         view.addSubview(videoLayer)
         videoLayer.addSubview(allowdedForTapArea)
-        [userVector, leftTimer, leftTimerShadow, rightTimer, rightTimerShadow, targetVector].forEach{allowdedForTapArea.addSubview($0)}
+        [leftTimer, leftTimerShadow, rightTimer, rightTimerShadow, timerLeftLabel, timerRightLabel, startTargetVector, userVector].forEach{allowdedForTapArea.addSubview($0)}
         
         NSLayoutConstraint.activate([
             videoLayer.topAnchor.constraint(equalTo: view.topAnchor),
@@ -106,6 +153,9 @@ class ViewController: UIViewController {
             leftTimerShadow.leadingAnchor.constraint(equalTo: leftTimer.leadingAnchor,constant: 5),
             leftTimerShadow.bottomAnchor.constraint(equalTo: leftTimer.bottomAnchor),
             
+            timerLeftLabel.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerYAnchor),
+            timerLeftLabel.leadingAnchor.constraint(equalTo: allowdedForTapArea.leadingAnchor, constant: 48),
+            
             rightTimer.topAnchor.constraint(equalTo: allowdedForTapArea.topAnchor, constant: 48),
             rightTimer.trailingAnchor.constraint(equalTo: allowdedForTapArea.trailingAnchor, constant: -25),
             rightTimer.bottomAnchor.constraint(equalTo: allowdedForTapArea.bottomAnchor, constant: -48),
@@ -114,20 +164,37 @@ class ViewController: UIViewController {
             rightTimerShadow.trailingAnchor.constraint(equalTo: rightTimer.trailingAnchor,constant: -5),
             rightTimerShadow.bottomAnchor.constraint(equalTo: rightTimer.bottomAnchor),
             
-            targetVector.centerXAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerXAnchor),
-            targetVector.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerYAnchor),
+            timerRightLabel.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerYAnchor),
+            timerRightLabel.trailingAnchor.constraint(equalTo: allowdedForTapArea.trailingAnchor, constant: -48),
             
         ])
+        
+        // Переписываю констрейнты targetVector в другом формате для анимации
+        centralXAnchorTargetVector = startTargetVector.centerXAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerXAnchor)
+        centralYAnchorTargetVector = startTargetVector.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerYAnchor)
+        
+        NSLayoutConstraint.activate([
+            centralXAnchorTargetVector,
+            centralYAnchorTargetVector,
+        ])
+        
     }
     
     //MARK: - Создаем Методы
     
     // Функция воспроизведения видео на заднем фоне
     func playVideo() {
-        guard let path = Bundle.main.path(forResource: "FastTyping", ofType: "mp4") else {
+        guard let url = Bundle.main.url(forResource: "FastTyping", withExtension: "mp4") else {
             return
         }
-        let player = AVPlayer(url: URL(fileURLWithPath: path))
+        let asset = AVAsset(url: url)
+        let duration = asset.duration
+        let durationTime = CMTimeGetSeconds(duration)
+        
+        print(durationTime)
+        durationTimer = Int(durationTime)
+        
+        let player = AVPlayer(url: url)
         let playerLayer = AVPlayerLayer(player: player)
         playerLayer.frame = self.view.bounds
         playerLayer.videoGravity = .resizeAspectFill
@@ -135,19 +202,43 @@ class ViewController: UIViewController {
         
         player.play()
         
-        [allowdedForTapArea, userVector, leftTimer, leftTimerShadow, rightTimer, rightTimerShadow, targetVector].forEach{videoLayer.bringSubviewToFront($0)}
+        [allowdedForTapArea, userVector, leftTimer, leftTimerShadow, rightTimer, rightTimerShadow, timerLeftLabel, timerRightLabel, startTargetVector].forEach{videoLayer.bringSubviewToFront($0)}
+        
     }
+    
+    // Настраваем таймер обратного отсчета
+    private func setupStartGestures() {
+        startTargetVector.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapToStart)))
+        startTargetVector.isUserInteractionEnabled = true
+    }
+    
+    @objc func timerAction() {
+        userVector.isHidden = false
+        if durationTimer > 0 {
+            durationTimer -= 1
+        }
+        
+        timerLeftLabel.text = "\(durationTimer)"
+        timerRightLabel.text = "\(durationTimer)"
+        
+        if durationTimer == 0 {
+            countdownTimer.invalidate()
+        }
+    }
+    
+    @objc private func tapToStart() {
+        countdownTimer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(timerAction), userInfo: nil, repeats: true)
+    }
+    
     
     // Настраваем анимацию руки по движению по экрану
-    private func setupGestures() {
-        userVector.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handlePanGesture)))
-        userVector.isUserInteractionEnabled = true
+    private func setupHandmovingGestures() {
+        startTargetVector.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handlePanGesture)))
+        startTargetVector.isUserInteractionEnabled = true
     }
-    
     
     @objc func handlePanGesture(gesture: UIPanGestureRecognizer) {
         if gesture.state == .began {
-            print("began")
         } else if gesture.state == .changed {
             let translation = gesture.translation(in: allowdedForTapArea)
             userVector.transform = CGAffineTransform(
@@ -158,6 +249,5 @@ class ViewController: UIViewController {
                 self.userVector.transform = .identity
             }
         }
-        
     }
 }

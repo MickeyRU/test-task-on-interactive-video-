@@ -227,14 +227,18 @@ class ViewController: UIViewController {
     }
     
     @objc private func tapToStart() {
+        UIView.animate(withDuration: Double(durationTimer), animations: {
+            self.startTargetVector.frame.origin.x -= 200
+            self.startTargetVector.frame.origin.y -= 100
+        }, completion: nil)
         countdownTimer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(timerAction), userInfo: nil, repeats: true)
     }
     
     
     // Настраваем анимацию руки по движению по экрану
     private func setupHandmovingGestures() {
-        startTargetVector.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handlePanGesture)))
-        startTargetVector.isUserInteractionEnabled = true
+        userVector.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handlePanGesture)))
+        userVector.isUserInteractionEnabled = true
     }
     
     @objc func handlePanGesture(gesture: UIPanGestureRecognizer) {
@@ -251,3 +255,4 @@ class ViewController: UIViewController {
         }
     }
 }
+
